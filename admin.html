@@ -9,41 +9,85 @@
         body {
             font-family: system-ui, sans-serif;
             background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            height: 100vh;
         }
-        .cms-container {
-            max-width: 900px;
-            margin: 2rem auto;
+        .sidebar {
+            width: 220px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            display: flex;
+            flex-direction: column;
+            padding-top: 1rem;
+        }
+        .sidebar-header {
+            padding: 0 1.5rem 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-bottom: 1px solid #34495e;
+        }
+        .sidebar-nav {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+            flex-grow: 1;
+        }
+        .sidebar-nav li a {
+            display: block;
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            transition: background-color 0.2s;
+        }
+        .sidebar-nav li a:hover, .sidebar-nav li.active a {
+            background-color: #34495e;
+        }
+        .sidebar-footer {
+            padding: 1.5rem;
+            border-top: 1px solid #34495e;
+        }
+        .sidebar-footer a {
+            color: #ecf0f1;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            background-color: #3498db;
+            padding: 0.75rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .sidebar-footer a:hover {
+            background-color: #2980b9;
+        }
+
+        .main-content {
+            flex-grow: 1;
             padding: 2rem;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-y: auto;
         }
-        .cms-header {
+        .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 1rem;
             margin-bottom: 1.5rem;
-        }
-        .cms-header h1 {
-            margin: 0;
         }
         .page-list {
             list-style: none;
             padding: 0;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .page-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            margin-bottom: 0.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #eee;
         }
-        .page-item:hover {
-            background-color: #f9f9f9;
+        .page-item:last-child {
+            border-bottom: none;
         }
         .page-item-actions .btn {
             margin-left: 0.5rem;
@@ -56,21 +100,28 @@
     </style>
 </head>
 <body>
-    <div class="cms-container">
-        <header class="cms-header">
-            <h1>CMS Dashboard</h1>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            My CMS
+        </div>
+        <ul class="sidebar-nav">
+            <li class="active"><a href="#">Pages</a></li>
+            <!-- Add other links here in the future, e.g., Media, Settings -->
+        </ul>
+        <div class="sidebar-footer">
+            <a href="view.html" target="_blank">Visit Site</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="page-header">
+            <h1>Pages</h1>
             <button id="create-new-page-btn" class="btn btn-primary">Create New Page</button>
         </header>
-        <main>
-            <h2>Pages</h2>
-            <div id="page-list-container">
-                <!-- Page list will be dynamically populated here -->
-                <div class="no-pages">
-                    <p>No pages found. Create your first page to get started!</p>
-                </div>
-            </div>
-        </main>
-    </div>
+        <div id="page-list-container">
+            <!-- Page list will be dynamically populated here -->
+        </div>
+    </main>
 
     <!-- Core App scripts needed for CMS -->
     <script src="js/utils/EventBus.js"></script>
@@ -111,7 +162,8 @@
                     li.innerHTML = `
                         <div class="page-item-info">
                             <strong>${escapeHTML(page.name)}</strong>
-                            <small>(id: ${escapeHTML(page.id)})</small>
+                            <br>
+                            <small>id: ${escapeHTML(page.id)} | Last updated: ${new Date(page.updatedAt).toLocaleString()}</small>
                         </div>
                         <div class="page-item-actions">
                             <button class="btn btn-secondary edit-btn">Edit</button>
@@ -147,8 +199,7 @@
 
                 // Handle Edit
                 if (target.classList.contains('edit-btn')) {
-                    // Redirect to the editor with the page ID as a query parameter
-                    window.location.href = \`index.html?page=\${pageId}\`;
+                    window.location.href = `index.html?page=${pageId}`;
                 }
 
                 // Handle Delete
@@ -166,7 +217,7 @@
 
             // Helper to prevent XSS
             function escapeHTML(str) {
-                return str.replace(/[&<>'"]/g,
+                return String(str).replace(/[&<>'"]/g,
                     tag => ({
                         '&': '&amp;',
                         '<': '&lt;',
