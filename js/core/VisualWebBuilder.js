@@ -1,6 +1,6 @@
 /**
  * VisualWebBuilder - Main Application Controller
- * 
+ *
  * This is the main application controller that orchestrates all the components
  * and manages the overall application state and lifecycle.
  */
@@ -9,14 +9,15 @@ function VisualWebBuilder() {
     this.initialized = false;
     this.eventBus = new EventBus();
     this.panelManager = null;
-    
+
     // Application state
     this.state = {
         currentViewport: 'desktop',
         selectedElement: null,
-        isDemoMode: false
+        isDemoMode: false,
+        currentPageId: null // For CMS page editing
     };
-    
+
     // DOM references
     this.elements = {
         container: null,
@@ -39,28 +40,46 @@ VisualWebBuilder.prototype.init = function() {
 
     try {
         console.log('Initializing Visual Web Builder...');
-        
+
+        // Check for page editing context from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageId = urlParams.get('page');
+        if (pageId) {
+            this.state.currentPageId = pageId;
+            console.log('CMS Mode: Editing page', pageId);
+        }
+
         // Get DOM references
         console.log('Getting DOM references...');
         this.getDOMReferences();
         console.log('DOM references obtained successfully');
-        
+
         // Initialize core systems
         console.log('Initializing core systems...');
         this.initializeCore();
         console.log('Core systems initialized successfully');
-        
+
+        // Load page content if in editing mode
+        if (this.state.currentPageId) {
+            this.loadPageForEditing(this.state.currentPageId);
+        } else {
+            // If not editing a specific page, fall back to the default behavior
+            if (this.storageManager.restoreLastSession) {
+                this.storageManager.restoreLastSession();
+            }
+        }
+
         // Set up event listeners
         this.setupEventListeners();
-        
+
         // Mark as initialized
         this.initialized = true;
-        
+
         console.log('Visual Web Builder initialization complete');
-        
+
         // Emit initialization complete event
         this.eventBus.emit('app:initialized');
-        
+
     } catch (error) {
         console.error('Failed to initialize Visual Web Builder:', error);
         throw error;
@@ -81,13 +100,13 @@ VisualWebBuilder.prototype.getDOMReferences = function() {
     // Validate that all required elements exist
     var requiredElements = ['container', 'header', 'leftPanel', 'centerPanel', 'rightPanel', 'canvas'];
     var missingElements = [];
-    
+
     for (var i = 0; i < requiredElements.length; i++) {
         if (!this.elements[requiredElements[i]]) {
             missingElements.push(requiredElements[i]);
         }
     }
-    
+
     if (missingElements.length > 0) {
         throw new Error('Missing required DOM elements: ' + missingElements.join(', '));
     }
@@ -100,51 +119,55 @@ VisualWebBuilder.prototype.initializeCore = function() {
     // Initialize error handler first (other components depend on it)
     this.errorHandler = new ErrorHandler(this.eventBus);
     this.errorHandler.init();
-    
+
     // Initialize fallback manager
     this.fallbackManager = new FallbackManager(this.eventBus, this.errorHandler);
     this.fallbackManager.init();
-    
+
     // Initialize panel manager
     this.panelManager = new PanelManager(this.elements.container, this.eventBus);
     this.panelManager.init();
-    
+
     // Initialize element library
     this.elementLibrary = new ElementLibrary(this.elements.leftPanel, this.eventBus);
     this.elementLibrary.init();
-    
+
     // Initialize drag and drop engine
     this.dragDropEngine = new DragDropEngine(this.elements.canvas, this.elementLibrary, this.eventBus);
     this.dragDropEngine.init();
-    
+
     // Initialize canvas manager
     this.canvasManager = new CanvasManager(this.elements.canvas, this.eventBus);
     this.canvasManager.init();
-    
+
     // Initialize property editor
     this.propertyEditor = new PropertyEditor(this.elements.rightPanel, this.eventBus);
     this.propertyEditor.init();
-    
+
     // Initialize preview manager
     this.previewManager = new PreviewManager(this, this.eventBus);
     this.previewManager.init();
-    
+
     // Initialize storage manager
     this.storageManager = new StorageManager(this.canvasManager, this.eventBus);
     this.storageManager.init();
-    
+
+    // Initialize CMS manager
+    this.cmsManager = new CmsManager(this.storageManager);
+    this.cmsManager.init();
+
     // Initialize export engine
     this.exportEngine = new ExportEngine(this.canvasManager, this.eventBus);
     this.exportEngine.init();
-    
+
     // Initialize responsive manager
     this.responsiveManager = new ResponsiveManager(this.canvasManager, this.propertyEditor, this.exportEngine, this.eventBus);
     this.responsiveManager.init();
-    
+
     // Initialize advanced manipulation
     this.advancedManipulation = new AdvancedManipulation(this.canvasManager, this.eventBus);
     this.advancedManipulation.init();
-    
+
     // Initialize UX enhancement
     console.log('Initializing UX Enhancement...');
     this.uxEnhancement = new UXEnhancement(this.eventBus);
@@ -153,49 +176,89 @@ VisualWebBuilder.prototype.initializeCore = function() {
 };
 
 /**
+ * Load a page's content for editing
+ * @param {string} pageId - The ID of the page to load
+ */
+VisualWebBuilder.prototype.loadPageForEditing = function(pageId) {
+    const page = this.cmsManager.getPage(pageId);
+    const saveBtn = document.getElementById('save-btn');
+
+    if (page && page.content) {
+        console.log('Loading content for page:', pageId);
+        this.storageManager.reconstructCanvasState(page.content);
+        if (saveBtn) {
+            saveBtn.textContent = 'Save Page';
+        }
+    } else {
+        console.warn('No content found for page:', pageId, '. Starting with a blank canvas.');
+        if (saveBtn) {
+            const pageName = page ? page.name : 'New Page';
+            saveBtn.textContent = `Save: ${pageName}`;
+        }
+    }
+};
+
+/**
+ * Handle save button click
+ */
+VisualWebBuilder.prototype.handleSaveClick = function(event) {
+    if (this.state.currentPageId) {
+        console.log('Saving content for page:', this.state.currentPageId);
+        // Serialize the current canvas state. The name is temporary and not used.
+        const pageContent = this.storageManager.serializeProject('page-content');
+        this.cmsManager.savePageContent(this.state.currentPageId, pageContent);
+        this.showNotification('Page saved successfully!', 'success');
+    } else {
+        // This is the original behavior for non-CMS project saves
+        console.log('Save button clicked');
+        this.eventBus.emit('action:save', { event: event });
+    }
+};
+
+/**
  * Set up global event listeners using event delegation
  */
 VisualWebBuilder.prototype.setupEventListeners = function() {
     var self = this;
-    
+
     // Set up event delegation for the entire application
     this.setupEventDelegation();
-    
+
     // Header button event listeners
     this.setupHeaderButtons();
-    
+
     // Viewport control listeners
     this.setupViewportControls();
-    
+
     // Global keyboard shortcuts
     this.setupKeyboardShortcuts();
-    
+
     // Window resize handler with debouncing
     var debouncedResize = DOMUtils.debounce(function() {
         self.handleWindowResize();
     }, 250);
-    
+
     window.addEventListener('resize', debouncedResize);
-    
+
     // Application event listeners
     this.eventBus.on('viewport:changed', function(data) {
         self.handleViewportChange(data);
     });
-    
+
     // Notification events
     this.eventBus.on('notification:show', function(data) {
         self.showNotification(data.message, data.type, data.duration);
     });
-    
+
     // Panel events
     this.eventBus.on('panels:resized', function(data) {
         self.handlePanelsResized(data);
     });
-    
+
     this.eventBus.on('panel:toggled', function(data) {
         self.handlePanelToggled(data);
     });
-    
+
     // Fallback events
     this.eventBus.on('fallback:create-element', function(data) {
         self.handleFallbackElementCreation(data);
@@ -207,24 +270,24 @@ VisualWebBuilder.prototype.setupEventListeners = function() {
  */
 VisualWebBuilder.prototype.setupEventDelegation = function() {
     var self = this;
-    
+
     // Set up event delegation on the main container
     DOMUtils.addEventListener(this.elements.container, 'click', function(event) {
         self.handleGlobalClick(event);
     });
-    
+
     DOMUtils.addEventListener(this.elements.container, 'mousedown', function(event) {
         self.handleGlobalMouseDown(event);
     });
-    
+
     DOMUtils.addEventListener(this.elements.container, 'mouseup', function(event) {
         self.handleGlobalMouseUp(event);
     });
-    
+
     DOMUtils.addEventListener(this.elements.container, 'mouseover', function(event) {
         self.handleGlobalMouseOver(event);
     });
-    
+
     DOMUtils.addEventListener(this.elements.container, 'mouseout', function(event) {
         self.handleGlobalMouseOut(event);
     });
@@ -235,7 +298,7 @@ VisualWebBuilder.prototype.setupEventDelegation = function() {
  */
 VisualWebBuilder.prototype.handleGlobalClick = function(event) {
     var target = event.target;
-    
+
     // Handle button clicks
     if (target.matches('#save-btn')) {
         this.handleSaveClick(event);
@@ -250,7 +313,7 @@ VisualWebBuilder.prototype.handleGlobalClick = function(event) {
     } else if (target.matches('.viewport-btn')) {
         this.handleViewportClick(event);
     }
-    
+
     // Emit global click event for other components
     this.eventBus.emit('global:click', {
         target: target,
@@ -287,15 +350,6 @@ VisualWebBuilder.prototype.handleGlobalMouseOut = function(event) {
         target: event.target,
         event: event
     });
-};
-
-/**
- * Handle save button click
- */
-VisualWebBuilder.prototype.handleSaveClick = function(event) {
-    console.log('Save button clicked');
-    this.eventBus.emit('action:save', { event: event });
-    // TODO: Implement save functionality in future tasks
 };
 
 /**
@@ -371,10 +425,9 @@ VisualWebBuilder.prototype.setupKeyboardShortcuts = function() {
         // Ctrl/Cmd + S for save
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
             event.preventDefault();
-            console.log('Save shortcut triggered');
-            // TODO: Implement save functionality
+            self.handleSaveClick(event); // Call the main save handler
         }
-        
+
         // Escape to exit demo mode
         if (event.key === 'Escape' && self.state.isDemoMode) {
             self.toggleDemoMode();
@@ -402,9 +455,9 @@ VisualWebBuilder.prototype.handleWindowResize = function() {
  */
 VisualWebBuilder.prototype.setViewport = function(viewport) {
     if (this.state.currentViewport === viewport) return;
-    
+
     this.state.currentViewport = viewport;
-    
+
     // Update active viewport button
     var viewportButtons = document.querySelectorAll('.viewport-btn');
     for (var i = 0; i < viewportButtons.length; i++) {
@@ -415,10 +468,10 @@ VisualWebBuilder.prototype.setViewport = function(viewport) {
             btn.classList.remove('active');
         }
     }
-    
+
     // Emit viewport change event
     this.eventBus.emit('viewport:changed', { viewport: viewport });
-    
+
     console.log('Viewport changed to: ' + viewport);
 };
 
@@ -427,10 +480,10 @@ VisualWebBuilder.prototype.setViewport = function(viewport) {
  */
 VisualWebBuilder.prototype.handleViewportChange = function(data) {
     var viewport = data.viewport;
-    
+
     // Update canvas dimensions based on viewport
     this.updateCanvasForViewport(viewport);
-    
+
     console.log('Handling viewport change to: ' + viewport);
 };
 
@@ -456,22 +509,22 @@ VisualWebBuilder.prototype.handlePanelToggled = function(data) {
 VisualWebBuilder.prototype.updateCanvasForViewport = function(viewport) {
     var canvas = this.elements.canvas;
     if (!canvas) return;
-    
+
     // Define viewport dimensions
     var viewportSizes = {
         desktop: { width: '100%', maxWidth: '1200px' },
         tablet: { width: '768px', maxWidth: '768px' },
         mobile: { width: '375px', maxWidth: '375px' }
     };
-    
+
     var size = viewportSizes[viewport] || viewportSizes.desktop;
-    
+
     DOMUtils.setStyles(canvas, {
         width: size.width,
         maxWidth: size.maxWidth,
         transition: 'all 0.3s ease'
     });
-    
+
     // Update canvas container for centering
     var canvasContainer = canvas.parentElement;
     if (canvasContainer) {
@@ -486,10 +539,10 @@ VisualWebBuilder.prototype.updateCanvasForViewport = function(viewport) {
  */
 VisualWebBuilder.prototype.toggleDemoMode = function() {
     this.state.isDemoMode = !this.state.isDemoMode;
-    
+
     // Emit demo mode toggle event for PreviewManager to handle
     this.eventBus.emit('demo:toggled', { isDemoMode: this.state.isDemoMode });
-    
+
     console.log('Demo mode ' + (this.state.isDemoMode ? 'enabled' : 'disabled'));
 };
 
@@ -510,16 +563,16 @@ VisualWebBuilder.prototype.getState = function() {
  */
 VisualWebBuilder.prototype.createElement = function(tagName, options) {
     options = options || {};
-    
+
     // Add unique ID if not provided
     if (!options.attributes) {
         options.attributes = {};
     }
-    
+
     if (!options.attributes.id) {
         options.attributes.id = DOMUtils.generateUniqueId('vwb-element');
     }
-    
+
     // Add application-specific classes
     var appClasses = 'vwb-element';
     if (options.className) {
@@ -527,7 +580,7 @@ VisualWebBuilder.prototype.createElement = function(tagName, options) {
     } else {
         options.className = appClasses;
     }
-    
+
     return DOMUtils.createElement(tagName, options);
 };
 
@@ -539,16 +592,16 @@ VisualWebBuilder.prototype.handleFallbackElementCreation = function(data) {
         if (!data || !data.elementType || !data.position) {
             throw new Error('Invalid fallback element creation data');
         }
-        
+
         // Create element using the canvas manager
         if (this.canvasManager) {
             var element = this.canvasManager.createElement(data.elementType, {
                 position: data.position
             });
-            
+
             if (element) {
                 console.log('Created element via fallback:', data.elementType);
-                
+
                 // Emit element created event
                 this.eventBus.emit('element:created', {
                     element: element,
@@ -558,7 +611,7 @@ VisualWebBuilder.prototype.handleFallbackElementCreation = function(data) {
                 });
             }
         }
-        
+
     } catch (error) {
         console.error('Error in fallback element creation:', error);
         this.eventBus.emit('error:drag-drop', {
@@ -575,7 +628,7 @@ VisualWebBuilder.prototype.handleFallbackElementCreation = function(data) {
 VisualWebBuilder.prototype.showNotification = function(message, type, duration) {
     type = type || 'info';
     duration = duration || 3000;
-    
+
     var notification = this.createElement('div', {
         className: 'vwb-notification vwb-notification-' + type,
         textContent: message,
@@ -594,7 +647,7 @@ VisualWebBuilder.prototype.showNotification = function(message, type, duration) 
             transition: 'all 0.3s ease'
         }
     });
-    
+
     // Set background color based on type
     var colors = {
         info: '#3498db',
@@ -602,12 +655,12 @@ VisualWebBuilder.prototype.showNotification = function(message, type, duration) 
         warning: '#f39c12',
         error: '#e74c3c'
     };
-    
+
     notification.style.backgroundColor = colors[type] || colors.info;
-    
+
     // Add to DOM
     document.body.appendChild(notification);
-    
+
     // Animate in
     setTimeout(function() {
         DOMUtils.setStyles(notification, {
@@ -615,19 +668,19 @@ VisualWebBuilder.prototype.showNotification = function(message, type, duration) 
             transform: 'translateX(0)'
         });
     }, 10);
-    
+
     // Auto remove
     setTimeout(function() {
         DOMUtils.setStyles(notification, {
             opacity: '0',
             transform: 'translateX(100%)'
         });
-        
+
         setTimeout(function() {
             DOMUtils.removeElement(notification);
         }, 300);
     }, duration);
-    
+
     return notification;
 };
 
@@ -650,68 +703,68 @@ VisualWebBuilder.prototype.getEventBus = function() {
  */
 VisualWebBuilder.prototype.destroy = function() {
     if (!this.initialized) return;
-    
+
     // Clean up components
     if (this.panelManager) {
         this.panelManager.destroy();
     }
-    
+
     if (this.elementLibrary) {
         this.elementLibrary.destroy();
     }
-    
+
     if (this.dragDropEngine) {
         this.dragDropEngine.destroy();
     }
-    
+
     if (this.canvasManager) {
         this.canvasManager.destroy();
     }
-    
+
     if (this.propertyEditor) {
         this.propertyEditor.destroy();
     }
-    
+
     if (this.previewManager) {
         this.previewManager.destroy();
     }
-    
+
     if (this.storageManager) {
         this.storageManager.destroy();
     }
-    
+
     if (this.exportEngine) {
         this.exportEngine.destroy();
     }
-    
+
     if (this.responsiveManager) {
         this.responsiveManager.destroy();
     }
-    
+
     if (this.advancedManipulation) {
         this.advancedManipulation.destroy();
     }
-    
+
     // Clean up UX enhancement
     if (this.uxEnhancement) {
         this.uxEnhancement.destroy();
     }
-    
+
     // Clean up fallback manager
     if (this.fallbackManager) {
         this.fallbackManager.destroy();
     }
-    
+
     // Clean up error handler last
     if (this.errorHandler) {
         this.errorHandler.destroy();
     }
-    
+
     // Clear timeouts
     if (this.resizeTimeout) {
         clearTimeout(this.resizeTimeout);
     }
-    
+
     // Reset state
     this.initialized = false;
     this.state = {
@@ -719,6 +772,6 @@ VisualWebBuilder.prototype.destroy = function() {
         selectedElement: null,
         isDemoMode: false
     };
-    
+
     console.log('Visual Web Builder destroyed');
 };

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Website</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            line-height: 1.6;
+            background-color: #fff;
+            color: #333;
+            margin: 0;
+        }
+        .site-header {
+            background-color: #f8f9fa;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .site-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            gap: 1.5rem;
+        }
+        .site-nav a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 500;
+        }
+        .site-nav a:hover {
+            text-decoration: underline;
+        }
+        .site-main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .site-footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding: 2rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <nav class="site-nav" id="main-navigation">
+            <!-- Navigation will be populated by JavaScript -->
+        </nav>
+    </header>
+
+    <main class="site-main" id="page-content">
+        <!-- Page content will be rendered here -->
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; 2025 My Awesome Website. Powered by a custom CMS.</p>
+    </footer>
+
+    <!-- Core App scripts needed for rendering -->
+    <script src="js/utils/EventBus.js"></script>
+    <script src="js/utils/DOMUtils.js"></script>
+    <script src="js/core/StorageManager.js"></script>
+    <script src="js/core/CmsManager.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Initialization ---
+            const eventBus = new EventBus();
+            const storageManager = new StorageManager(null, eventBus);
+            const cmsManager = new CmsManager(storageManager);
+            cmsManager.init();
+
+            const navContainer = document.getElementById('main-navigation');
+            const contentContainer = document.getElementById('page-content');
+            const pages = cmsManager.getPages();
+
+            // --- Navigation ---
+            function renderNavigation() {
+                if (pages.length === 0) {
+                    navContainer.innerHTML = '<p>No pages to display.</p>';
+                    return;
+                }
+                const ul = document.createElement('ul');
+                pages.forEach(page => {
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = `#${page.id}`;
+                    a.textContent = page.name;
+                    li.appendChild(a);
+                    ul.appendChild(li);
+                });
+                navContainer.appendChild(ul);
+            }
+
+            // --- Content Rendering ---
+            function renderContent(pageId) {
+                contentContainer.innerHTML = ''; // Clear previous content
+                const page = cmsManager.getPage(pageId);
+
+                if (!page) {
+                    contentContainer.innerHTML = '<h2>Page not found</h2><p>The requested page could not be found.</p>';
+                    document.title = 'Page Not Found';
+                    return;
+                }
+
+                document.title = page.name;
+
+                if (!page.content || !page.content.elements) {
+                    contentContainer.innerHTML = '<h2>This page is empty</h2>';
+                    return;
+                }
+
+                // Simplified renderer based on reconstructCanvasState
+                const elementsToCreate = Object.values(page.content.elements);
+                const createdElements = {};
+
+                function renderElement(elementData) {
+                    // Avoid re-rendering if already processed
+                    if (createdElements[elementData.id]) return createdElements[elementData.id];
+
+                    // Create the DOM element
+                    const domElement = DOMUtils.createElement(elementData.type, {
+                        id: elementData.id,
+                        content: elementData.content,
+                        attributes: elementData.attributes
+                    });
+
+                    // Apply styles
+                    if (elementData.styles) {
+                        Object.assign(domElement.style, elementData.styles);
+                    }
+
+                    createdElements[elementData.id] = domElement;
+
+                    // Handle children recursively
+                    if (elementData.children && elementData.children.length > 0) {
+                        elementData.children.forEach(childId => {
+                            const childData = page.content.elements[childId];
+                            if (childData) {
+                                const childElement = renderElement(childData);
+                                domElement.appendChild(childElement);
+                            }
+                        });
+                    }
+
+                    return domElement;
+                }
+
+                // Render only root elements to the main container
+                page.content.rootElements.forEach(rootId => {
+                    const rootElementData = page.content.elements[rootId];
+                    if (rootElementData) {
+                        contentContainer.appendChild(renderElement(rootElementData));
+                    }
+                });
+            }
+
+            // --- Routing ---
+            function handleRouteChange() {
+                const pageId = window.location.hash.substring(1);
+                // If no hash, load the first page as default
+                const defaultPageId = pages.length > 0 ? pages[0].id : null;
+                renderContent(pageId || defaultPageId);
+            }
+
+            // --- Initial Load ---
+            renderNavigation();
+            handleRouteChange();
+
+            // Listen for hash changes
+            window.addEventListener('hashchange', handleRouteChange);
+        });
+    </script>
+</body>
+</html>

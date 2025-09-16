@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Dashboard</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .cms-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cms-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .cms-header h1 {
+            margin: 0;
+        }
+        .page-list {
+            list-style: none;
+            padding: 0;
+        }
+        .page-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        .page-item:hover {
+            background-color: #f9f9f9;
+        }
+        .page-item-actions .btn {
+            margin-left: 0.5rem;
+        }
+        .no-pages {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="cms-container">
+        <header class="cms-header">
+            <h1>CMS Dashboard</h1>
+            <button id="create-new-page-btn" class="btn btn-primary">Create New Page</button>
+        </header>
+        <main>
+            <h2>Pages</h2>
+            <div id="page-list-container">
+                <!-- Page list will be dynamically populated here -->
+                <div class="no-pages">
+                    <p>No pages found. Create your first page to get started!</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Core App scripts needed for CMS -->
+    <script src="js/utils/EventBus.js"></script>
+    <script src="js/core/StorageManager.js"></script>
+    <script src="js/core/CmsManager.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize managers
+            const eventBus = new EventBus();
+            const storageManager = new StorageManager(null, eventBus); // CanvasManager is not needed here
+            const cmsManager = new CmsManager(storageManager);
+            cmsManager.init();
+
+            const pageListContainer = document.getElementById('page-list-container');
+            const createPageBtn = document.getElementById('create-new-page-btn');
+
+            // Function to render the list of pages
+            function renderPageList() {
+                const pages = cmsManager.getPages();
+                pageListContainer.innerHTML = ''; // Clear current list
+
+                if (pages.length === 0) {
+                    pageListContainer.innerHTML = `
+                        <div class="no-pages">
+                            <p>No pages found. Create your first page to get started!</p>
+                        </div>`;
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'page-list';
+                pages.forEach(page => {
+                    const li = document.createElement('li');
+                    li.className = 'page-item';
+                    li.dataset.pageId = page.id;
+
+                    li.innerHTML = `
+                        <div class="page-item-info">
+                            <strong>${escapeHTML(page.name)}</strong>
+                            <small>(id: ${escapeHTML(page.id)})</small>
+                        </div>
+                        <div class="page-item-actions">
+                            <button class="btn btn-secondary edit-btn">Edit</button>
+                            <button class="btn btn-danger delete-btn">Delete</button>
+                        </div>
+                    `;
+                    ul.appendChild(li);
+                });
+                pageListContainer.appendChild(ul);
+            }
+
+            // Event handler for creating a new page
+            createPageBtn.addEventListener('click', function() {
+                const pageName = prompt("Enter a name for your new page (e.g., 'Home', 'About Us'):");
+                if (pageName && pageName.trim() !== '') {
+                    try {
+                        const newPage = cmsManager.createPage(pageName.trim());
+                        alert(`Page "${newPage.name}" created successfully!`);
+                        renderPageList();
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                }
+            });
+
+            // Event delegation for edit and delete buttons
+            pageListContainer.addEventListener('click', function(event) {
+                const target = event.target;
+                const pageItem = target.closest('.page-item');
+                if (!pageItem) return;
+
+                const pageId = pageItem.dataset.pageId;
+
+                // Handle Edit
+                if (target.classList.contains('edit-btn')) {
+                    // Redirect to the editor with the page ID as a query parameter
+                    window.location.href = \`index.html?page=\${pageId}\`;
+                }
+
+                // Handle Delete
+                if (target.classList.contains('delete-btn')) {
+                    const page = cmsManager.getPage(pageId);
+                    if (confirm(`Are you sure you want to delete the page "${page.name}"? This action cannot be undone.`)) {
+                        cmsManager.deletePage(pageId);
+                        renderPageList();
+                    }
+                }
+            });
+
+            // Initial render
+            renderPageList();
+
+            // Helper to prevent XSS
+            function escapeHTML(str) {
+                return str.replace(/[&<>'"]/g,
+                    tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag] || tag)
+                );
+            }
+        });
+    </script>
+</body>
+</html>
