@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Web Builder</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Skip link for accessibility -->
+    <a href="#main-canvas" class="vwb-skip-link">Skip to main content</a>
+    
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>Visual Web Builder</h1>
+            <div class="header-controls" role="toolbar" aria-label="Main actions">
+                <button id="save-btn" class="btn btn-primary" aria-label="Save project (Ctrl+S)">Save</button>
+                <button id="load-btn" class="btn btn-secondary" aria-label="Load project (Ctrl+O)">Load</button>
+                <button id="export-btn" class="btn btn-secondary" aria-label="Export HTML/CSS (Ctrl+E)">Export</button>
+                <button id="preview-window-btn" class="btn btn-secondary" aria-label="Open preview in new window (Ctrl+Shift+P)">Preview Window</button>
+                <button id="demo-btn" class="btn btn-accent" aria-label="Toggle demo mode (F5)">Demo</button>
+            </div>
+        </header>
+
+        <!-- Main three-panel layout -->
+        <main class="main-content">
+            <!-- Left Panel - Element Library -->
+            <aside class="left-panel" id="element-library">
+                <h2>Elements</h2>
+                <div class="element-categories">
+                    <div class="category">
+                        <h3>Layout</h3>
+                        <div class="element-list" id="layout-elements">
+                            <!-- Elements will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="category">
+                        <h3>Text</h3>
+                        <div class="element-list" id="text-elements">
+                            <!-- Elements will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="category">
+                        <h3>Form</h3>
+                        <div class="element-list" id="form-elements">
+                            <!-- Elements will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="category">
+                        <h3>Media</h3>
+                        <div class="element-list" id="media-elements">
+                            <!-- Elements will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Panel - Canvas -->
+            <section class="center-panel">
+                <div class="canvas-toolbar">
+                    <div class="viewport-controls" role="radiogroup" aria-label="Viewport size selection">
+                        <button class="viewport-btn active" data-viewport="desktop" role="radio" aria-checked="true" aria-label="Desktop viewport (Ctrl+1)">Desktop</button>
+                        <button class="viewport-btn" data-viewport="tablet" role="radio" aria-checked="false" aria-label="Tablet viewport (Ctrl+2)">Tablet</button>
+                        <button class="viewport-btn" data-viewport="mobile" role="radio" aria-checked="false" aria-label="Mobile viewport (Ctrl+3)">Mobile</button>
+                    </div>
+                </div>
+                <div class="canvas-container">
+                    <div class="canvas" id="main-canvas">
+                        <!-- User-created elements will be rendered here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel - Properties -->
+            <aside class="right-panel" id="property-editor">
+                <h2>Properties</h2>
+                <div class="property-sections">
+                    <div class="no-selection-message">
+                        <p>Select an element to edit its properties</p>
+                    </div>
+                    <div class="property-content" style="display: none;">
+                        <!-- Property controls will be populated by JavaScript -->
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- JavaScript files -->
+    <script src="js/utils/EventBus.js"></script>
+    <script src="js/utils/DOMUtils.js"></script>
+    <script src="js/core/ErrorHandler.js"></script>
+    <script src="js/core/FallbackManager.js"></script>
+    <script src="js/core/PanelManager.js"></script>
+    <script src="js/core/ElementLibrary.js"></script>
+    <script src="js/core/DragDropEngine.js"></script>
+    <script src="js/core/CanvasManager.js"></script>
+    <script src="js/core/PropertyEditor.js"></script>
+    <script src="js/core/PreviewManager.js"></script>
+    <script src="js/core/StorageManager.js"></script>
+    <script src="js/core/ExportEngine.js"></script>
+    <script src="js/core/ResponsiveManager.js"></script>
+    <script src="js/core/AdvancedManipulation.js"></script>
+    <script src="js/core/UXEnhancement-simple.js"></script>
+    <script src="js/core/VisualWebBuilder.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>

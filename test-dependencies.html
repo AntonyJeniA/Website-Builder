@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dependencies - Visual Web Builder</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; }
+        .test-result { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript Dependencies Test</h1>
+    <div id="results"></div>
+
+    <script>
+        function addResult(message, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        function testDependency(name, className) {
+            try {
+                if (typeof window[className] !== 'undefined') {
+                    addResult(`✓ ${name} loaded successfully`, 'success');
+                    return true;
+                } else {
+                    addResult(`✗ ${name} not found (${className} is undefined)`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                addResult(`✗ ${name} error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Load scripts one by one and test each
+        const scripts = [
+            { src: 'js/utils/EventBus.js', name: 'EventBus', className: 'EventBus' },
+            { src: 'js/utils/DOMUtils.js', name: 'DOMUtils', className: 'DOMUtils' },
+            { src: 'js/core/ErrorHandler.js', name: 'ErrorHandler', className: 'ErrorHandler' },
+            { src: 'js/core/FallbackManager.js', name: 'FallbackManager', className: 'FallbackManager' },
+            { src: 'js/core/PanelManager.js', name: 'PanelManager', className: 'PanelManager' },
+            { src: 'js/core/ElementLibrary.js', name: 'ElementLibrary', className: 'ElementLibrary' },
+            { src: 'js/core/DragDropEngine.js', name: 'DragDropEngine', className: 'DragDropEngine' },
+            { src: 'js/core/CanvasManager.js', name: 'CanvasManager', className: 'CanvasManager' },
+            { src: 'js/core/PropertyEditor.js', name: 'PropertyEditor', className: 'PropertyEditor' },
+            { src: 'js/core/PreviewManager.js', name: 'PreviewManager', className: 'PreviewManager' },
+            { src: 'js/core/StorageManager.js', name: 'StorageManager', className: 'StorageManager' },
+            { src: 'js/core/ExportEngine.js', name: 'ExportEngine', className: 'ExportEngine' },
+            { src: 'js/core/ResponsiveManager.js', name: 'ResponsiveManager', className: 'ResponsiveManager' },
+            { src: 'js/core/AdvancedManipulation.js', name: 'AdvancedManipulation', className: 'AdvancedManipulation' },
+            { src: 'js/core/UXEnhancement-simple.js', name: 'UXEnhancement', className: 'UXEnhancement' },
+            { src: 'js/core/VisualWebBuilder.js', name: 'VisualWebBuilder', className: 'VisualWebBuilder' }
+        ];
+
+        let currentIndex = 0;
+
+        function loadNextScript() {
+            if (currentIndex >= scripts.length) {
+                addResult('All scripts loaded! Testing initialization...', 'info');
+                testInitialization();
+                return;
+            }
+
+            const script = scripts[currentIndex];
+            addResult(`Loading ${script.name}...`, 'info');
+
+            const scriptElement = document.createElement('script');
+            scriptElement.src = script.src;
+            
+            scriptElement.onload = function() {
+                if (testDependency(script.name, script.className)) {
+                    currentIndex++;
+                    setTimeout(loadNextScript, 100); // Small delay to ensure script is processed
+                } else {
+                    addResult(`Failed to load ${script.name} - stopping`, 'error');
+                }
+            };
+
+            scriptElement.onerror = function() {
+                addResult(`Failed to load script: ${script.src}`, 'error');
+            };
+
+            document.head.appendChild(scriptElement);
+        }
+
+        function testInitialization() {
+            try {
+                addResult('Testing VisualWebBuilder instantiation...', 'info');
+                
+                // Create minimal DOM structure
+                const container = document.createElement('div');
+                container.className = 'app-container';
+                container.innerHTML = `
+                    <header class="app-header"><h1>Test</h1></header>
+                    <main class="main-content">
+                        <aside class="left-panel" id="element-library"><h2>Elements</h2></aside>
+                        <section class="center-panel">
+                            <div class="canvas-container">
+                                <div class="canvas" id="main-canvas"></div>
+                            </div>
+                        </section>
+                        <aside class="right-panel" id="property-editor">
+                            <h2>Properties</h2>
+                            <div class="no-selection-message"><p>Select an element</p></div>
+                            <div class="property-content" style="display: none;"></div>
+                        </aside>
+                    </main>
+                `;
+                container.style.display = 'none';
+                document.body.appendChild(container);
+
+                const app = new VisualWebBuilder();
+                addResult('✓ VisualWebBuilder instance created', 'success');
+
+                app.init();
+                addResult('✓ VisualWebBuilder initialized successfully!', 'success');
+
+                window.visualWebBuilder = app;
+                addResult('🎉 All tests passed!', 'success');
+
+            } catch (error) {
+                addResult(`✗ Initialization failed: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Start loading scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('Starting dependency tests...', 'info');
+            loadNextScript();
+        });
+    </script>
+</body>
+</html>

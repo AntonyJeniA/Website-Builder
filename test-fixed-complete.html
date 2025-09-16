@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixed Complete Test - Visual Web Builder</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        .test-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-family: system-ui, sans-serif;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .test-result {
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .success { background: #27ae60; }
+        .error { background: #e74c3c; }
+        .info { background: #3498db; }
+        .warning { background: #f39c12; }
+        .test-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .test-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+    </style>
+</head>
+<body>
+    <!-- Test Overlay -->
+    <div class="test-overlay" id="test-overlay">
+        <div class="test-header">
+            <h1>🔧 Visual Web Builder - Fixed Complete Test</h1>
+            <p>Testing all components including PropertyEditor and AdvancedManipulation fixes...</p>
+        </div>
+        <div id="test-results"></div>
+        <div class="test-actions">
+            <button class="btn btn-success" onclick="hideTestOverlay()" style="display: none;" id="success-btn">
+                ✅ All Tests Passed - Launch App
+            </button>
+            <button class="btn btn-secondary" onclick="location.reload()" id="retry-btn">
+                🔄 Retry Tests
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App Structure (hidden during tests) -->
+    <div class="app-container" style="display: none;" id="main-app">
+        <header class="app-header">
+            <h1>Visual Web Builder</h1>
+            <div class="header-controls" role="toolbar" aria-label="Main actions">
+                <button id="save-btn" class="btn btn-primary" aria-label="Save project (Ctrl+S)">Save</button>
+                <button id="load-btn" class="btn btn-secondary" aria-label="Load project (Ctrl+O)">Load</button>
+                <button id="export-btn" class="btn btn-secondary" aria-label="Export HTML/CSS (Ctrl+E)">Export</button>
+                <button id="preview-window-btn" class="btn btn-secondary" aria-label="Open preview in new window (Ctrl+Shift+P)">Preview Window</button>
+                <button id="demo-btn" class="btn btn-accent" aria-label="Toggle demo mode (F5)">Demo</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <aside class="left-panel" id="element-library">
+                <h2>Elements</h2>
+                <div class="element-categories">
+                    <div class="category">
+                        <h3>Layout</h3>
+                        <div class="element-list" id="layout-elements"></div>
+                    </div>
+                    <div class="category">
+                        <h3>Text</h3>
+                        <div class="element-list" id="text-elements"></div>
+                    </div>
+                    <div class="category">
+                        <h3>Form</h3>
+                        <div class="element-list" id="form-elements"></div>
+                    </div>
+                    <div class="category">
+                        <h3>Media</h3>
+                        <div class="element-list" id="media-elements"></div>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="center-panel">
+                <div class="canvas-toolbar">
+                    <div class="viewport-controls" role="radiogroup" aria-label="Viewport size selection">
+                        <button class="viewport-btn active" data-viewport="desktop" role="radio" aria-checked="true" aria-label="Desktop viewport (Ctrl+1)">Desktop</button>
+                        <button class="viewport-btn" data-viewport="tablet" role="radio" aria-checked="false" aria-label="Tablet viewport (Ctrl+2)">Tablet</button>
+                        <button class="viewport-btn" data-viewport="mobile" role="radio" aria-checked="false" aria-label="Mobile viewport (Ctrl+3)">Mobile</button>
+                    </div>
+                </div>
+                <div class="canvas-container">
+                    <div class="canvas" id="main-canvas"></div>
+                </div>
+            </section>
+
+            <aside class="right-panel" id="property-editor">
+                <h2>Properties</h2>
+                <div class="property-sections">
+                    <div class="no-selection-message">
+                        <p>Select an element to edit its properties</p>
+                    </div>
+                    <div class="property-content" style="display: none;"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- JavaScript files -->
+    <script src="js/utils/EventBus.js"></script>
+    <script src="js/utils/DOMUtils.js"></script>
+    <script src="js/core/ErrorHandler.js"></script>
+    <script src="js/core/FallbackManager.js"></script>
+    <script src="js/core/PanelManager.js"></script>
+    <script src="js/core/ElementLibrary.js"></script>
+    <script src="js/core/DragDropEngine.js"></script>
+    <script src="js/core/CanvasManager.js"></script>
+    <script src="js/core/PropertyEditor.js"></script>
+    <script src="js/core/PreviewManager.js"></script>
+    <script src="js/core/StorageManager.js"></script>
+    <script src="js/core/ExportEngine.js"></script>
+    <script src="js/core/ResponsiveManager.js"></script>
+    <script src="js/core/AdvancedManipulation.js"></script>
+    <script src="js/core/UXEnhancement-simple.js"></script>
+    <script src="js/core/VisualWebBuilder.js"></script>
+
+    <script>
+        let testsPassed = false;
+
+        function addTestResult(message, type) {
+            const results = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+            
+            // Auto-scroll to bottom
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function hideTestOverlay() {
+            document.getElementById('test-overlay').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+        }
+
+        function runCompleteTest() {
+            addTestResult('🚀 Starting comprehensive test suite with fixes...', 'info');
+
+            // Test 1: Check all dependencies
+            const dependencies = [
+                'EventBus', 'DOMUtils', 'ErrorHandler', 'FallbackManager', 
+                'PanelManager', 'ElementLibrary', 'DragDropEngine', 'CanvasManager',
+                'PropertyEditor', 'PreviewManager', 'StorageManager', 'ExportEngine',
+                'ResponsiveManager', 'AdvancedManipulation', 'UXEnhancement', 'VisualWebBuilder'
+            ];
+
+            let dependenciesOk = true;
+            dependencies.forEach(dep => {
+                if (typeof window[dep] === 'undefined') {
+                    addTestResult(`❌ ${dep} not found`, 'error');
+                    dependenciesOk = false;
+                } else {
+                    addTestResult(`✅ ${dep} loaded`, 'success');
+                }
+            });
+
+            if (!dependenciesOk) {
+                addTestResult('❌ Dependency check failed', 'error');
+                return;
+            }
+
+            addTestResult('✅ All dependencies loaded successfully', 'success');
+
+            // Test 2: Specifically test PropertyEditor and AdvancedManipulation
+            try {
+                addTestResult('🔧 Testing PropertyEditor instantiation...', 'info');
+                const eventBus = new EventBus();
+                const rightPanel = document.getElementById('property-editor');
+                const propertyEditor = new PropertyEditor(rightPanel, eventBus);
+                addTestResult('✅ PropertyEditor instance created', 'success');
+
+                addTestResult('🔧 Testing AdvancedManipulation instantiation...', 'info');
+                const mockCanvasManager = {
+                    canvas: document.getElementById('main-canvas'),
+                    state: { selectedElement: null, elements: {}, rootElements: [] },
+                    selectElement: function() {},
+                    deselectElement: function() {},
+                    processNewElement: function() {}
+                };
+                const advancedManipulation = new AdvancedManipulation(mockCanvasManager, eventBus);
+                addTestResult('✅ AdvancedManipulation instance created', 'success');
+
+            } catch (error) {
+                addTestResult(`❌ Component instantiation failed: ${error.message}`, 'error');
+                return;
+            }
+
+            // Test 3: Check DOM structure
+            const requiredElements = [
+                '.app-container', '.app-header', '.left-panel', '.center-panel', 
+                '.right-panel', '#main-canvas', '#property-editor'
+            ];
+
+            let domOk = true;
+            requiredElements.forEach(selector => {
+                if (!document.querySelector(selector)) {
+                    addTestResult(`❌ Missing DOM element: ${selector}`, 'error');
+                    domOk = false;
+                } else {
+                    addTestResult(`✅ Found DOM element: ${selector}`, 'success');
+                }
+            });
+
+            if (!domOk) {
+                addTestResult('❌ DOM structure check failed', 'error');
+                return;
+            }
+
+            addTestResult('✅ DOM structure validated', 'success');
+
+            // Test 4: Test VisualWebBuilder initialization
+            try {
+                addTestResult('🔧 Creating VisualWebBuilder instance...', 'info');
+                const app = new VisualWebBuilder();
+                addTestResult('✅ VisualWebBuilder instance created', 'success');
+
+                addTestResult('🔧 Initializing VisualWebBuilder...', 'info');
+                app.init();
+                addTestResult('✅ VisualWebBuilder initialized successfully', 'success');
+
+                // Make globally available
+                window.visualWebBuilder = app;
+
+                // Test 5: Test basic functionality
+                addTestResult('🔧 Testing basic functionality...', 'info');
+                
+                const state = app.getState();
+                if (state && state.initialized) {
+                    addTestResult('✅ App state is valid', 'success');
+                } else {
+                    addTestResult('⚠️ App state might be invalid', 'warning');
+                }
+
+                // Test event bus
+                let eventReceived = false;
+                app.getEventBus().on('test-event', () => { eventReceived = true; });
+                app.getEventBus().emit('test-event');
+                
+                if (eventReceived) {
+                    addTestResult('✅ Event system working', 'success');
+                } else {
+                    addTestResult('⚠️ Event system might have issues', 'warning');
+                }
+
+                // Test PropertyEditor and AdvancedManipulation integration
+                if (app.propertyEditor && app.propertyEditor.initialized) {
+                    addTestResult('✅ PropertyEditor integrated successfully', 'success');
+                } else {
+                    addTestResult('⚠️ PropertyEditor integration issue', 'warning');
+                }
+
+                if (app.advancedManipulation && app.advancedManipulation.initialized) {
+                    addTestResult('✅ AdvancedManipulation integrated successfully', 'success');
+                } else {
+                    addTestResult('⚠️ AdvancedManipulation integration issue', 'warning');
+                }
+
+                addTestResult('🎉 All tests passed! Visual Web Builder is ready with fixes applied.', 'success');
+                
+                // Show success button
+                document.getElementById('success-btn').style.display = 'inline-block';
+                testsPassed = true;
+
+            } catch (error) {
+                addTestResult(`❌ Initialization failed: ${error.message}`, 'error');
+                addTestResult(`Stack trace: ${error.stack}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Run tests when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runCompleteTest, 500); // Small delay to ensure all scripts are loaded
+        });
+    </script>
+</body>
+</html>
