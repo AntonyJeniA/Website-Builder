@@ -79,6 +79,46 @@ StorageManager.prototype.init = function() {
 };
 
 /**
+ * Save the entire site data (for CMS)
+ * @param {Object} siteData - The site data object, typically { pages: [...] }
+ */
+StorageManager.prototype.saveSiteData = function(siteData) {
+    try {
+        const siteDataStr = JSON.stringify(siteData);
+        localStorage.setItem('vwb-sitedata', siteDataStr);
+        this.eventBus.emit('cms:data-saved');
+        console.log('Site data saved successfully.');
+    } catch (error) {
+        console.error('Error saving site data:', error);
+        this.eventBus.emit('error:storage', {
+            error: error,
+            operation: 'save site data'
+        });
+    }
+};
+
+/**
+ * Load the entire site data (for CMS)
+ * @returns {Object|null} The site data object or null if not found/error
+ */
+StorageManager.prototype.loadSiteData = function() {
+    try {
+        const siteDataStr = localStorage.getItem('vwb-sitedata');
+        if (!siteDataStr) {
+            return null;
+        }
+        return JSON.parse(siteDataStr);
+    } catch (error) {
+        console.error('Error loading site data:', error);
+        this.eventBus.emit('error:storage', {
+            error: error,
+            operation: 'load site data'
+        });
+        return null;
+    }
+};
+
+/**
  * Set up event listeners
  */
 StorageManager.prototype.setupEventListeners = function() {
